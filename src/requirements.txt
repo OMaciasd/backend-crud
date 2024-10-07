@@ -9,3 +9,4 @@ marshmallow==3.22.0
 pytest
 requests>=2.0.0
 python-dotenv>=0.15.0
+requests-mock>=1.9.3
