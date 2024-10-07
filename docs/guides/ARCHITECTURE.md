@@ -1,494 +1,546 @@
-# **Architecture Guide**
+# Architecture Guide
 
 ## Contents
 
-- ⚙️[System Overview](#system-overview)
-- 📊[Diagram](#diagram)
-- 🔗[Component Interactions](#component-interactions)
-- ⚠️[Critical Points and Scaling](#critical-points-and-scaling)
-- 📈[Data Flow](#data-flow)
-- 🔄[Overall Flow](#overall-flow)
-- 🚀[CI/CD Pipeline with GitHub Actions](#ci-cd-pipeline-with-github-actions)
-- 🎯[Overall Goals and Benefits](#overall-goals-and-benefits)
-- 📊[Critical Metrics for End-to-End System Health and Performanc](#critical-metrics-for-end-to-end-system-health-and-performance)
-- 📈[Monitoring and Logging](#monitoring-and-logging)
-- 🚧[Error Handling and Rollback](#error-handling-and-rollback)
-- ➡️[Security](#security)
-- ✏️[Additional Considerations](#additional-considerations)
+- [Architecture Guide](#architecture-guide)
+  - [Contents](#contents)
+  - [⚙️ System Overview](#️-system-overview)
+  - [📊 Diagram](#-diagram)
+  - [🔗 Component Interactions](#-component-interactions)
+    - [1. User Registration](#1-user-registration)
+    - [2. Fetching User Details](#2-fetching-user-details)
+    - [3. Updating User Information](#3-updating-user-information)
+    - [4. Deleting a User](#4-deleting-a-user)
+  - [⚠️ Critical Points and Scaling](#️-critical-points-and-scaling)
+    - [Examples of Load Distribution Among Servers](#examples-of-load-distribution-among-servers)
+    - [How Redis Enhances Performance](#how-redis-enhances-performance)
+  - [📈 Data Flow](#-data-flow)
+    - [Flow Diagram](#flow-diagram)
+    - [CRUD Operations Summary](#crud-operations-summary)
+  - [🔄 Overall Flow Explained](#-overall-flow-explained)
+    - [Emphasizing Real-Time Data Updates](#emphasizing-real-time-data-updates)
+    - [🚀 CI/CD Pipeline with GitHub Actions](#-cicd-pipeline-with-github-actions)
+      - [1. **Setting Up the Workflow File**](#1-setting-up-the-workflow-file)
+      - [2. **Running Unit Tests**](#2-running-unit-tests)
+      - [3. **Building the Docker Image**](#3-building-the-docker-image)
+      - [4. **Deployment to Render**](#4-deployment-to-render)
+      - [5. **Notifications**](#5-notifications)
+    - [Final Considerations](#final-considerations)
+  - [🎯 Overall Goals and Benefits](#-overall-goals-and-benefits)
+  - [📊 Critical Metrics for End-to-End System Health and Performance](#-critical-metrics-for-end-to-end-system-health-and-performance)
+    - [Suggested Tools for Monitoring Critical Metrics](#suggested-tools-for-monitoring-critical-metrics)
+    - [Suggested Metrics to Monitor](#suggested-metrics-to-monitor)
+  - [📈 Monitoring and Logging](#-monitoring-and-logging)
+    - [Metrics to Log](#metrics-to-log)
+    - [Accessing Logs](#accessing-logs)
+  - [🚧 Error Handling and Rollback](#-error-handling-and-rollback)
+    - [1. Error Detection](#1-error-detection)
+    - [2. Error Handling in Flask](#2-error-handling-in-flask)
+    - [3. Rollback Strategy](#3-rollback-strategy)
+      - [Database Transactions](#database-transactions)
+    - [4. Testing and Validation](#4-testing-and-validation)
+      - [Automated Testing](#automated-testing)
+      - [Staging Environment](#staging-environment)
+    - [5. User-Friendly Error Responses](#5-user-friendly-error-responses)
+      - [Custom Error Pages](#custom-error-pages)
+      - [Graceful Degradation](#graceful-degradation)
+    - [6. Post-Mortem Analysis](#6-post-mortem-analysis)
+      - [Root Cause Analysis](#root-cause-analysis)
+  - [➡️ Security](#️-security)
+    - [Types of Validations](#types-of-validations)
+    - [Authentication Techniques](#authentication-techniques)
+  - [✏️ Additional Considerations](#️-additional-considerations)
 
+## ⚙️ System Overview
 
-## ⚙️**System Overview**
+The system is a CRUD (Create, Read, Update, Delete) application, which is a fundamental feature in any system. The interface (frontend) is developed using common technologies like HTML, CSS, and JavaScript, while the backend (the brain of the system) uses **Flask** to process information. Everything runs inside **Docker containers**, which are like small capsules that keep the system functioning without external interference, and orchestrated using Docker Compose. The production environment is deployed via **Render**, and **GitHub Actions** is used for continuous integration and deployment (CI/CD).
 
-- **Target Audience**: This architecture is aimed at **LatAm Airlines data analysts**, developers, and business intelligence teams who require robust data processing and analysis capabilities.
+## 📊 Diagram
 
-- **Use Case**: Ideal for real-time data analytics, large-scale data ingestion, and high-throughput data pipelines, where the system needs to handle large volumes of data from various sources, process it efficiently, and provide actionable insights through accessible APIs.
+This diagram visualizes how the components of the system interact. For example, the browser where you click a button (frontend) communicates with a server (backend) that manages all the business logic. The information you see is stored in a database.
 
-- **Site Reliability Engineering (SRE) Integration**
+1. **Frontend (HTML, CSS, JavaScript)**.
+2. **Backend (Flask API)**.
+3. **Database (PostgreSQL or JSON for local testing)**.
+4. **Render (Cloud Deployment)**.
+5. **Docker Compose (Service Orchestration)**.
 
-  - Integrating principles ensures reliable, available, and high-performance systems, enhancing operational efficiency and the end-user experience.
-
-## 📊**Diagram**
+Use tool **draw.io**, to create this diagram.
 
 ![Architecture Diagram](../assets/images/diagram.png)
 
-- **Scalability to 50 Systems**
+## 🔗 Component Interactions
 
-  - **Overview**: Scalability is a cornerstone of this system's architecture, ensuring that as demand grows, the system can expand seamlessly to support or moe.
+The components of the system work together: when you make a request, such as registering an account or viewing information, the browser (frontend) sends that request to the server (backend), which processes it. The server then retrieves or saves the information in a database and sends a response back to your screen.
 
-    - This section details the strategic approaches taken to ensure that the system remains robust, responsive, and reliable as it scales.
+- The frontend makes HTTP requests to the Flask backend.
 
-      - Modular components:
-        - Ease of Replication.
-        - Decoupled Architecture.
-        - Upgrade and Maintenance Flexibility.
+- Flask handles these requests, interacts with the database, and returns responses.
 
-      - Load balancing strategies:
-        - IP Hashing Consistency.
-        - Round Robin Distribution.
-        - Least Connections Optimization.
+- **Docker Compose** ensures that all these pieces are coordinated.
 
-      - Distributed system architecture:
-        - Microservices Architecture.
-        - Data Sharding for Performance.
-        - High Availability through Redundancy.
-        - Global Distribution for Latency Reduction.
+### 1. User Registration
 
-## 🔗**Component Interactions**
+- **HTTP Request**:
+  - **Method**: POST
+  - **Endpoint**: `/api/register`
+  - **Request Body** (JSON):
 
-- **Cloud Access Limitations**: Unfortunately, due to the requirement for credit card verification to access cloud platforms, I was unable to leverage free tiers or trial accounts. This constraint limited my ability to test and build infrastructure directly in cloud environments.
+    ```json
+    {
+      "username": "newuser",
+      "password": "securepassword"
+    }
+    ```
 
-- **Local Environment Challenges**: Initially, I attempted to use to build and manage infrastructure on Windows.
+- **Expected Response**:
+  - **Status Code**: 201 Created
+  - **Response Body** (JSON):
 
-  - However, I encountered persistent compatibility issues between **Terraform** and **Docker Desktop**, which hindered the effective setup and management of the infrastructure.
+    ```json
+    {
+      "message": "User registered successfully",
+      "user_id": 123
+    }
+    ```
 
-![Terraform](../assets/images/infrastructure/terraform.png)
+### 2. Fetching User Details
 
-![Scout](../assets/images/infrastructure/scout.png)
+- **HTTP Request**:
+  - **Method**: GET
+  - **Endpoint**: `/api/users/123`
 
-- **Workaround with Vagrant**: To address these issues, I transitioned to using a based setup on a **Ubuntu** environment.
+- **Expected Response**:
+  - **Status Code**: 200 OK
+  - **Response Body** (JSON):
 
-  - This local setup offered several advantages:
+    ```json
+    {
+      "user_id": 123,
+      "username": "newuser",
+      "created_at": "2024-01-01T12:00:00Z"
+    }
+    ```
 
-    - **Better Compatibility**: Allowed me to create a more controlled and compatible environment for running, addressing the compatibility problems faced with **Docker**.
+### 3. Updating User Information
 
-    - **Local Testing and Development**: The environment provided a local solution for testing and development, enabling me to proceed with Terraform configurations and infrastructure management without relying on cloud resources.
+- **HTTP Request**:
+  - **Method**: PUT
+  - **Endpoint**: `/api/users/123`
+  - **Request Body** (JSON):
 
-    - **CI/CD Pipeline Preparation**: By using, I could still develop and test my infrastructure as code locally.
+    ```json
+    {
+      "username": "updateduser"
+    }
+    ```
 
-      - This setup ensured that once cloud access is available or feasible, the transition from local development to a cloud environment via pipelines with **GitHub Actions** would be smoother.
+- **Expected Response**:
+  - **Status Code**: 200 OK
+  - **Response Body** (JSON):
 
-    - **Future Integration**: The based local setup serves as a temporary measure, allowing me to refine and validate the infrastructure code. Once cloud access is possible, I plan to migrate the tested configurations to a cloud environment for final deployment and scaling.
+    ```json
+    {
+      "message": "User updated successfully"
+    }
+    ```
 
-- **Design Choices**:
+### 4. Deleting a User
 
-  1. **Scalability**:
+- **HTTP Request**:
+  - **Method**: DELETE
+  - **Endpoint**: `/api/users/123`
 
-      - The choice of **RabbitMQ** as the message broker, and a columnar database like **Postgres** supports high-throughput data streams and complex analytical queries, making it suitable for data-intensive applications.
+- **Expected Response**:
+  - **Status Code**: 204 No Content
+  - **Response Body**: None
 
-  2. **Flexibility**:
+## ⚠️ Critical Points and Scaling
 
-      - The use of **Flask** for API development provides flexibility and ease of integration with various third-party applications and tools, enabling customized and scalable solutions.
+As the system grows in user numbers, it may face certain limits, such as how many requests it can handle simultaneously or the amount of data it can process. We can scale the system by adding more servers (load balancing) or using techniques like caching to speed up processing. Below are specific of how to implement these strategies:
 
-      - This API provides standard HTTP methods for interacting with the data, making it easy for third-party applications and users to access and visualize the data using tools like **ELK**, **Grafana**, **Prometheus**, and **Loki**.
+### Examples of Load Distribution Among Servers
 
-  3. **Infrastructure Management with Terraform**:
+1. **Load Balancer**:
 
-      - The entire infrastructure, including the Pub/Sub, database, and API, is provisioned and managed.
+   - Implementing a load balancer, such as **Nginx**, allows for distributing incoming requests across multiple backend server instances. This not only helps manage a higher volume of traffic but also improves system availability and resilience.
 
-      - Ensures that the environment is consistently configured and easily replicable across different stages of the development lifecycle.
+   - If the system receives a large number of simultaneous requests, the load balancer can send the first 50 requests to one Flask instance, the next 50 to another, and so forth. This ensures that no single instance becomes overwhelmed, which could lead to slow response times or server crashes.
 
-  4. **Containerization and Deployment with Docker**:
+2. **Horizontal Scaling**:
 
-      - **Image Build**: The application is containerized, with a Dockerfile that defines the environment and dependencies.
+   - Horizontal scaling involves adding more instances of the backend service. For instance, if the system initially runs on a single Flask instance and starts experiencing increased traffic, you can add two or three additional instances.
 
-  ![Hub](../assets/images/infrastructure/hub.png)
+   - Using **Kubernetes** to manage these containers allows the system to dynamically adjust to load. When demand increases, the system can automatically launch more instances.
 
-      - **Environment Variables**: Keys are passed to the Docker container at runtime, based on Terraform outputs.
+### How Redis Enhances Performance
 
-      - **Deployment Process**: The container is deployed to the target environment, ensuring consistency across development and production environments.
+1. **Caching Results**:
 
-  ![Docker](../assets/images/infrastructure/docker_desktop.png)
+   - Redis can be utilized as a caching system to store the results of frequent database queries. This reduces response times and decreases load on the database. For instance, if a database query is time-consuming and frequently executed, storing that result in Redis allows for much quicker retrieval.
 
-## ⚠️**Critical Points and Scaling**
+   - Consider a scenario where the system queries user data that doesn't change often. Storing this data in Redis means that whenever it's needed, the system can retrieve it from Redis instead of querying the database, which can be thousands of times faster.
 
-- 🔍**Critical Points**
+2. **Session Management**:
 
-  - This section identifies the critical components of the system and details the strategies implemented to handle failures, ensuring high availability and resilience.
+   - Using Redis to handle user sessions is another way to improve performance. Redis provides extremely fast access to session data, which is critical for applications requiring a smooth user experience.
 
-    - 🧐**Identification of Critical Components**:
+   - In an e-commerce application, when a user adds products to their cart, that information can be stored in Redis, allowing for quick retrieval and improving user experience.
 
-      - 📚**Databases**: Databases are essential for data storage and retrieval. Ensuring their availability and consistency is crucial.
+3. **Pub/Sub (Publish/Subscribe)**:
 
-      - 🔑**Authentication and Authorization Services**: These services are vital for security and access control. Any failure here could compromise the entire system.
+   - Redis also allows for implementing messaging patterns like Pub/Sub, which can help decouple components and enhance scalability. If multiple services need to communicate, Redis can be used to send messages between them, preventing one component from having to wait for another’s response.
 
-      - 🛣️**Gateways and APIs**: These serve as entry
-      points for external applications, making them critical for service communication.
+   - A notification service can publish messages via Redis whenever a record in the database is updated, allowing other services to listen for these events and react accordingly without delaying processing.
 
-      - 📂**File Storage**: Services that store and manage critical files, such as images or documents, are essential for business operations.
+## 📈 Data Flow
 
-    - 🛡️**Failure Handling Strategies**:
+The information flows simply: users interact with the system from the frontend, which sends requests to the backend. The backend manages these requests (saving a new record in the database) and finally sends a response to the interface.
 
-      - ♻️**Redundancy**: Implementation of backup copies of critical components (e.g., database clusters replicated across multiple availability zones).
+1. Users interact with the frontend.
+2. Requests are sent to the backend.
+3. The backend performs CRUD operations on the database.
+4. The backend sends the response back to the frontend.
 
-      - ⚖️**Load Balancing**: Use of load balancers to distribute traffic across multiple servers or service instances, ensuring the system doesn’t rely on a single point of failure.
+### Flow Diagram
 
-      - 🌀**Automatic Failover**: Configuration of failover mechanisms that automatically redirect traffic to redundant systems in case of a failure.
+![Flow Diagram](path/to/your/diagram.png)
 
-      - 🕵️**Monitoring and Alerting**: Implementation of monitoring tools that detect failures or suboptimal performance, triggering alerts and corrective actions.
+```plaintext
+[ User Interacts ]
+         |
+         v
+[ Send HTTP Request ]
+         |
+         v
+    +-----------------+
+    |      Backend    |
+    |                 |
+    |  +----------+   |
+    |  |   Create |   |
+    |  +----------+   |
+    |  +----------+   |
+    |  |    Read  |   |
+    |  +----------+   |
+    |  +----------+   |
+    |  |  Update  |   |
+    |  +----------+   |
+    |  +----------+   |
+    |  |  Delete   |  |
+    |  +----------+   |
+    +-----------------+
+         |
+         v
+[ Send Response ]
+         |
+         v
+[ Interface Updated ]
+```
 
-- 📏**Scaling**
+### CRUD Operations Summary
 
-  - This section describes how the system is designed to scale and support a significant increase in load, such as deployment across 50 or more systems, while maintaining performance and availability.
+| Operation | Description                                 | HTTP Method | Example Endpoint  |
+|-----------|---------------------------------------------|-------------|-------------------|
+| Create    | Adds a new record to the database           | POST        | `/api/users`      |
+| Read      | Retrieves records from the database         | GET         | `/api/users/{id}` |
+| Update    | Modifies an existing record in the database | PUT         | `/api/users/{id}` |
+| Delete    | Removes a record from the database          | DELETE      | `/api/users/{id}` |
 
-    - 🔨**Modular Design**:
-      - 🧱**Microservices**: The system is decomposed into independent microservices, allowing specific services to scale autonomously based on demand.
+## 🔄 Overall Flow Explained
 
-      - 🚢**Interoperability**: Each module or service follows communication standards (REST, gRPC), facilitating integration and scaling across different environments.
+The overall flow of the application involves a cyclical process of user interactions, HTTP requests, data processing, and response generation. This ensures that users receive timely updates and an interactive experience.
 
-    - 🐳**Containerization**:
-      - 📦**Use of Containers**: All services and applications are packaged in containers Docker, ensuring portability and consistency across deployment environments.
-      - ✉️**Service Isolation**: Containers ensure that each service has its own resources, avoiding conflicts and facilitating resource management.
+1. **User Interaction**:
 
-    - 🤖**Orchestration Tools**:
-      - 🎛️**Kubernetes/OpenShift**: Orchestration platforms are used to manage the deployment, scaling, and operation of containers, enabling automated scalability.
-      - 🔺**Autoscaling**: Configuration of autoscaling policies that dynamically adjust the number of service instances based on workload.
+   - The process begins when users interact with the frontend through actions like submitting forms, clicking buttons, or navigating between pages.
 
-    - 💾**Load Balancing Strategies**:
-      - 📡**Traffic Distribution**: Implementation of strategies to evenly distribute traffic across multiple instances, using load balancing algorithms like Round Robin, Least Connections, or IP Hashing.
-      - 🌍**Geodistribution**: Use of global load balancers to distribute traffic across different geographic regions, ensuring minimal latency and high global availability.
+2. **HTTP Request**:
 
-    - ♻️**Distributed System Architecture**:
-      - **Service Replication**: Distribution of service instances across multiple locations to improve resilience and reduce latency.
-      - 🗂️**Distributed Caching**: Implementation of distributed caching solutions (e.g., Redis, Memcached) to enhance performance and reduce load on central databases.
-      - 📬**Message Queues**: Use of distributed queue systems RabbitMQ to manage asynchronous communication between services, improving fault tolerance and scalability.
+   - Upon user action, the frontend constructs an **HTTP request**. This request specifies the operation type (GET, POST, PUT, DELETE), the API endpoint, and any necessary data (form inputs).
 
-## 📈**Data Flow**
+3. **Request Handling by Backend**:
 
-- **Ingestion to API Exposure**
+   - The request is sent to the **Flask backend**, which processes it based on the defined routes and HTTP methods. If data retrieval is required, Flask queries the database (PostgreSQL).
 
-  1. **Data Ingestion via Pub/Sub**:
+4. **Data Processing**:
 
-  - **Logstash**: Data is initially ingested through the Pub/Sub layer.
+   - The backend performs CRUD operations based on the request:
 
-    - It is published to specific topics in *RabbitMQ* where it is available for processing.
+     - **Create**: Inserts new records into the database.
 
-  ![Rabbitmq](../assets/images/monitoring/rabbitmq.png)
+     - **Read**: Retrieves records from the database.
 
-  - **Data Integrity**: Messages are ensured to be processed in the order they are received, and duplicate messages are handled through idempotent processing to maintain data consistency.
+     - **Update**: Modifies existing records.
 
-  1. **Data Processing and Storage**:
+     - **Delete**: Removes records.
 
-     - **Data Processing**: After ingestion, the data is processed as needed before storage. This may include transformations or aggregations.
+   - To ensure real-time updates, techniques such as **WebSockets** or **Server-Sent Events** can be utilized, allowing users to see current data without refreshing.
 
-  - **Database Storage**: The processed data is stored in Postgres.
+5. **Response Generation**:
 
-  - The database uses ACID (Atomicity, Consistency, Isolation, Durability) properties to ensure data integrity and consistency.
+   - After processing the request, the Flask backend constructs an **HTTP response**, which includes a status code (200 for success) and any relevant data (JSON results).
 
-    - This includes:
+6. **Response to Frontend**:
 
-      - **Transactions**: Database transactions are used to group multiple operations into a single unit of work.
+   - The response is sent back to the frontend, where JavaScript (often using frameworks like React or Vue.js) processes the data and updates the user interface accordingly.
 
-    - If any part of the transaction fails, the entire transaction is rolled back, ensuring that the database remains in a consistent state.
+7. **User Feedback**:
 
-      - **Consistency Checks**: Regular consistency checks and validations are performed to detect and correct any anomalies in the data.
+   - The updated information is presented to the user, completing the cycle. This ensures a seamless experience, providing immediate feedback based on user actions.
 
-  3. **Data Exposure through API**:
+### Emphasizing Real-Time Data Updates
 
-     - **API Access**: The stored data is exposed via a RESTful API developed with Flask.
+- To implement real-time data updates, consider the following methods:
 
-       - The API provides standard HTTP methods for data retrieval.
+  - **WebSocket Connections**: Enable full-duplex communication for immediate data transmission.
 
-     - **Data Integrity**: Data is served directly from the database without intermediate modifications, ensuring that the data presented through the API reflects the most recent and accurate state of the database.
+  - **Polling**: Periodically check for updates, though less efficient than WebSockets.
 
-  4. Additional Mechanisms for Data Integrity:
+  - **AJAX Requests**: Use AJAX for asynchronous updates that modify parts of the webpage without a full reload.
 
-     - **Error Handling**: Errors during data processing or API requests are logged and monitored.
+### 🚀 CI/CD Pipeline with GitHub Actions
 
-       - Automated alerts are triggered for any data inconsistencies or processing issues.
+Continuous Integration and Continuous Delivery (CI/CD) is a vital process to ensure that code changes are integrated quickly and reliably. Below are the detailed steps of the CI/CD pipeline using GitHub Actions:
 
-  - **Redundancy**: Data redundancy and backup mechanisms are in place to prevent data loss.
+#### 1. **Setting Up the Workflow File**
 
-  - Regular backups are taken, and failover strategies are implemented to ensure data availability.
+- Create a YAML file in the `.github/workflows` directory of your repository. This file defines the configuration for the CI/CD workflow.
 
-- **Integration Testing**
+#### 2. **Running Unit Tests**
 
-  - **Component Integration**: Explain how integration testing is conducted between different system components, from data ingestion to data exposure.
+- After installing dependencies, the next step is to run unit tests to ensure the code functions as expected.
 
-  - **Data Flow Validation**: Describe methods to validate that data flows correctly and reliably between components.
+#### 3. **Building the Docker Image**
 
-## 🔄**Overall Flow**
+- The application runs in containers, build the Docker image.
 
-1. **Data Ingestion**:
-   - **Logstash** ingests data from various sources flight data, passenger information, vauls position and sends it to **RabbitMQ**.
-   - **RabbitMQ** acts as the message broker, managing data streams and ensuring reliable delivery to processing services.
+#### 4. **Deployment to Render**
 
-2. **Data Processing**:
-   - Data received from **RabbitMQ** is processed by worker services. This may include filtering, aggregation, and transformation.
-   - Processed data is then stored in **Postgres**, ensuring data integrity and availability.
+- The tests pass and the image builds successfully, deploy the application to Render.
 
-3. **Data Storage**:
-   - **Postgres** serves as the data warehouse, storing processed data with high reliability.
-   - Data is stored in a structured format to support efficient querying and analysis.
+#### 5. **Notifications**
 
-4. **API Exposure**:
-   - **Flask** API provides access to the stored data, allowing clients to retrieve and interact with the data through standard HTTP methods.
-   - API endpoints are designed to handle high-throughput requests and ensure data accuracy.
+- Add notifications to alert the team about the status of the deployment. This can be done using integrations with Slack, email.
 
-5. **Monitoring and Alerts**:
-   - **Grafana**, **Prometheus**, and **Loki** are used to monitor the health and performance of the system.
-   - Alerts are configured to notify stakeholders of any critical issues or anomalies.
+### Final Considerations
 
-## 🚀**CI-CD Pipeline with GitHub Actions**
+- **Secret Management**: Use GitHub Secrets to store sensitive information like API keys.
 
-1. **Code Checkout**:
-   - **Action**: The pipeline checks out the latest code from the GitHub repository.
-   - **Purpose**: Ensures that the build and deployment processes use the most recent code changes.
+- **Docker Versioning**: Tagging Docker images with the commit version number for better tracking.
 
-2. **Build and Test**:
-   - **Action**: Executes automated tests (unit, integration) to validate code changes.
-   - **Purpose**: Maintains code quality and prevents the introduction of bugs.
+## 🎯 Overall Goals and Benefits
 
-3. **Build Docker Images**:
-   - **Action**: Docker images are built from the Dockerfile.
-   - **Purpose**: Creates consistent, portable environments for the application.
+The architecture's primary goals include **scalability** and **flexibility**, which are crucial for ensuring that the system can handle growth and adapt to changing needs. Here are some examples of how these goals translate into performance improvements:
 
-4. **Publish Docker Images**:
-   - **Action**: Docker images are pushed to Docker Hub or another container registry.
-   - **Purpose**: Makes the images available for deployment to various environments.
+1. **Scalability**:
 
-5. **Terraform Deployment**:
-   - **Action**: Applies Terraform configurations to provision or update infrastructure.
-   - **Purpose**: Automates the setup and management of infrastructure resources.
+   - **Load Balancing**: By distributing incoming requests across multiple servers, the system can handle more concurrent users without performance degradation. For example, using a load balancer like Nginx or AWS Elastic Load Balancing can significantly improve response times during peak traffic periods.
 
-6. **Deploy Application**:
-   - **Action**: Deploys Docker containers to the target environment.
-   - **Purpose**: Ensures the application is running in the specified environment with the latest code.
+   - **Horizontal Scaling**: The ability to add more instances of services (like Flask apps or database replicas) allows the system to accommodate increases in user demand. For instance, if a sudden spike in traffic occurs, deploying additional Docker containers can help maintain performance without downtime.
 
-7. **Post-Deployment Testing**:
-   - **Action**: Performs smoke tests or validation checks after deployment.
-   - **Purpose**: Confirms successful deployment and functional application.
+2. **Flexibility**:
 
-8. **Notification and Reporting**:
-   - **Action**: Sends notifications about pipeline status and deployment results.
-   - **Purpose**: Keeps the team informed and responsive to deployment issues.
+   - **Adaptable Tech Stack**: The use of Docker makes it easy to switch out components of the system as needed. If a more efficient database technology emerges, it can be integrated without significant changes to the entire application.
 
-9. **Rollback Mechanism**:
-   - **Action**: Reverts to previous versions if deployment fails.
-   - **Purpose**: Provides a mechanism to restore the previous stable state of the application.
+   - **Microservices Architecture**: Transitioning to a microservices architecture in the future allows for independent scaling and deployment of different system parts. For example, if the user authentication component becomes a bottleneck, it can be scaled independently from other services, leading to improved overall performance.
 
-## **Integration Testing and Rollback**
+## 📊 Critical Metrics for End-to-End System Health and Performance
 
-- **Integration Testing**:
-  - **Action**: Conduct tests to ensure all system components work together seamlessly.
-  - **Purpose**: Verifies end-to-end functionality and integration of data ingestion, processing, storage, and API exposure.
+To ensure the system functions well, we measure indicators like response time, success rate of requests, and resource usage like memory and CPU. These metrics help us identify problems before they affect users.
 
-- **Automated Rollback**:
-  - **Action**: Implement automatic rollback procedures within the CI/CD pipeline.
-  - **Purpose**: Quickly revert to stable versions in case of deployment failures.
+### Suggested Tools for Monitoring Critical Metrics
 
-## **Critical Metrics for End-to-End System Health and Performance**
+1. **Prometheus**:
 
-- In addition to basic metrics like CPU, RAM, and DISK USAGE, it is crucial to monitor the following metrics to understand the end-to-end health and performance of the system:
+   - **Functionality**: An open-source monitoring and alerting toolkit that is widely used for recording real-time metrics and providing alerting capabilities.
 
-    1. **Latency**
+   - **Usage**: Set up Prometheus to scrape metrics from your Flask application and visualize them using Grafana.
 
-         - **Description**: Measures the time taken for a data packet to travel from its source to its destination. In distributed systems, latency indicates communication efficiency between services.
+   - **Documentation**: [Prometheus](https://prometheus.io/docs/introduction/overview/)
 
-          - **Importance**: High latency can signal network issues, bottlenecks in the architecture, or overload in system components.
+2. **Grafana**:
 
-          - **Monitoring**: Measure latency across different system layers (e.g., frontend, backend, and between microservices) to identify and address issues.
+   - **Functionality**: A powerful visualization tool that integrates with various data sources, including Prometheus and Elasticsearch.
 
-    2. **Error Rate**
+   - **Usage**: Create dashboards that display your API response times, success/failure rates, and resource usage.
 
-       - **Description**: Represents the percentage of requests resulting in errors (e.g., HTTP 4xx and 5xx codes) out of the total requests processed.
-       - **Importance**: A rise in error rate may indicate problems such as configuration errors, failures in external dependencies, or network issues.
-       - **Monitoring**: Track error rates at both individual service levels and across the system to detect localized and global failures.
+   - **Documentation**: [Grafana](https://grafana.com/docs/grafana/latest/)
 
-    3. **Throughput**
+3. **Elastic Stack (ELK)**:
 
-         - **Description**: Measures the amount of data the system can process within a given time period, typically in terms of transactions per second or requests per minute.
-         - **Importance**: Low throughput can indicate performance issues like resource saturation and affects the system's ability to handle high traffic volumes.
-         - **Monitoring**: Monitor throughput at various points in the system to identify bottlenecks and ensure the system can handle expected traffic loads.
+   - **Functionality**: Comprises Elasticsearch, Logstash, and Kibana for log management and analysis.
 
-- **Scaling**
+   - **Usage**: Aggregate logs from your application and visualize the data to monitor health and performance.
 
-  - To ensure the system can scale to 50 or more systems, consider the following strategies:
+   - **Documentation**: [Elastic Stack](https://www.elastic.co/what-is/elk-stack)
 
-    - **Modular Design**
+### Suggested Metrics to Monitor
 
-      - **Description**: Break the system into modular components that can be scaled independently. Components should be loosely coupled to allow for independent development, deployment, and scaling.
+- **API Response Time**: Measure the average time it takes for your API to respond to requests.
 
-      - **Use**: Implement microservices to handle different functions, such as authentication, payment processing, and user management.
+- **Success/Failure Rate of Requests**: Track how many requests are successful versus those that fail, providing insights into potential issues.
 
-- **Containerization and Orchestration**
+- **CPU and Memory Usage**: Monitor resource consumption in your cloud environment (e.g., Render), which can impact performance.
 
-  - **Description**: Use containers Docker to package services and applications, facilitating deployment and scaling.
+## 📈 Monitoring and Logging
 
-  - **Orchestration**: Utilize orchestration tools like Kubernetes to manage and automatically scale containers based on demand.
+Critical components in application management, allowing developers and administrators to proactively identify and resolve issues, optimize performance, and ensure system availability. Below are specific examples of metrics you might consider logging and ways to access these logs.
 
-  - **Benefits**: Allows for rapid service replication and greater flexibility in adjusting resources.
+### Metrics to Log
 
-- **Load Balancing Strategies**
+1. **API Performance Metrics**:
 
-  - To effectively distribute traffic and improve system reliability:
+   - **Response Time**: Measures the time it takes for the server to process a request and send back a response.
 
-    - **Round Rob**in
-    - **Description**: Distributes requests sequentially acrossavailable servers.
+   - **Request Success Rate**: Percentage of requests completed successfully versus the total requests made.
 
-    - **Use**: Suitable for systems with uniform load distribution.
+   - **Error Types**: Logs the number of errors (500, 404.) generated during requests.
 
-- **Least Connections**
+2. **Resource Usage Metrics**:
 
-  - **Description**: Routes new requests to the server with the fewest active connections.
+   - **CPU and Memory Usage**: Monitors how many server resources are being utilized, which is crucial for detecting bottlenecks.
 
-  - **Use**: Ideal for systems with varying request processing times.
+   - **Database Connections**: Number of active connections and utilization rate of those connections.
 
-- **IP Hash**
+3. **User Activity Metrics**:
 
-  - **Description**: Routes requests based on a hash of the client’s IP address.
+   - **Number of Active Users**: Count of users interacting with the application within a specified time frame.
 
-  - **Use**: Maintains session affinity without additional session state storage.
+   - **Feature Access Frequency**: How often specific functions or endpoints are accessed.
 
-- **Distributed System Architecture**
+4. **Security Metrics**:
 
-  - For scalability and resilience:
+   - **Failed Access Attempts**: Number of login attempts that fail, which could indicate a potential attack.
 
-    - **Microservices Architecture**
+### Accessing Logs
 
-      - **Description**: Break down the application into independent microservices that communicate via APIs. Each microservice can be developed, deployed, and scaled independently.
+1. **Application Logs (Flask)**:
 
-      - **Benefits**: Enhances scalability and allows for quick recovery from failures, as a failure in one microservice does not impact others.
+   - **Flask Logging**: Flask has a built-in logging system that allows you to log information about each request. You can configure the level of detail (INFO, ERROR, DEBUG) in your application.
 
-    - **Event-Driven Architecture**
+   - **Access**: Logs can be stored in a file or sent to an external service for analysis, such as **Loggly** or **Papertrail**.
 
-      - **Description**: Use events to trigger communication and processing between services. Systems respond to events asynchronously.
+2. **Container Logs (Docker)**:
 
-      - **Benefits**: Facilitates scalability as events can be processed by multiple consumers without direct communication.
+   - **Docker Logs**: You can access the logs of a container using the command `docker logs <container_id>`, which allows you to see standard output and errors generated by the application.
 
-    - **Data Replication**
+   - **Remote Access**: Tools like **ELK Stack (Elasticsearch, Logstash, Kibana)** enable aggregation and visualization of logs from multiple containers in one place.
 
-      - **Description**: Replicate data across multiple locations to ensure high availability and fault tolerance.
+3. **Monitoring Tools**:
 
-      - **Benefits**: Reduces latency and ensures continuous availability even in the event of a node or data center failure.
+   - **Grafana and Prometheus**: These tools can be integrated to provide real-time visualizations of specific metrics. Prometheus collects and stores metrics, while Grafana allows you to create customizable dashboards.
 
-## 🎯**Overall Goals and Benefits**
+   - **Dashboard Access**: Through a web interface, you can monitor the state of your application and set alerts based on defined thresholds.
 
-1. **Efficiency**:
-   - **Benefit**: Automated CI/CD pipeline reduces manual intervention and accelerates delivery.
-   - **Goal**: Streamline the development and deployment process.
+## 🚧 Error Handling and Rollback
 
-2. **Consistency**:
-   - **Benefit**: Ensures uniformity across environments through containerization and automated deployments.
-   - **Goal**: Maintain consistent application behavior and configurations.
+Effective error handling and rollback strategies are crucial for maintaining system stability and user experience. Below are detailed steps to manage errors and implement rollback mechanisms.
 
-3. **Quality Assurance**:
-   - **Benefit**: Integrated testing maintains high code quality and reliability.
-   - **Goal**: Deliver robust and reliable applications.
+### 1. Error Detection
 
-4. **Scalability**:
-   - **Benefit**: Modular design and containerization support scaling to handle increased data volumes.
-   - **Goal**: Adapt to growing data and user demands.
+- **Logging**: Implement robust logging using Python's built-in `logging` module to capture exceptions and relevant information at various levels (INFO, WARNING, ERROR).
 
-5. **Monitoring and Reporting**:
-   - **Benefit**: Provides visibility into system performance and health.
-   - **Goal**: Proactively manage system issues and ensure optimal operation.
+- **Monitoring**: Use tools like **Grafana** or **Prometheus** for real-time monitoring and anomaly detection.
 
-6. **SRE and Scalability**
+### 2. Error Handling in Flask
 
-- **SRE**:
-  - **Principles**: Apply SRE practices to manage system reliability, availability, and performance.
-  - **Goal**: Ensure the system meets reliability and performance expectations.
+- **Global Error Handlers**: Define global error handlers to catch unhandled exceptions and respond with appropriate HTTP status codes.
 
-- **Scalability**:
-  - **Strategies**: Design for horizontal scaling, load balancing, and efficient resource management.
-  - **Goal**: Handle increased load and data volume effectively.
+- Wrap critical operations in **try-except** blocks to handle exceptions gracefully. This approach helps prevent the entire application from crashing due to unforeseen errors. Here’s how to implement it:
 
-## 📈**Monitoring and Logging**
+### 3. Rollback Strategy
 
-- **Tools and Techniques**
+#### Database Transactions
 
-  - **Centralized Logging**: Use **ELK Stack** for managing logs and visualizing log data.
+Ensuring atomicity in database operations is essential for maintaining data integrity, especially in scenarios where multiple operations must succeed or fail as a unit. Implementing transactions allows you to roll back changes in case of errors, thus preserving the consistency of the database.
 
-- **Monitoring Tools**:
+1. **Begin a Transaction**: Start a new transaction before performing any database operations.
 
-  - **Grafana**: For real-time metrics and dashboards.
+### 4. Testing and Validation
 
-  ![Grafana](../assets/images/monitoring/grafana.png)
+#### Automated Testing
 
-  - **Prometheus**: For collecting and querying time-series data.
+- **Unit and Integration Tests**: Implement unit and integration tests using frameworks like **pytest** to ensure code quality. Automated tests help catch bugs early and verify that the application behaves as expected.
 
-  ![Prometheus](../assets/images/monitoring/web.png)
+  - Create a suite of tests for API endpoints to confirm they return the expected responses for valid and invalid requests.
 
-  - **Loki**: For aggregating and visualizing logs with Grafana.
+#### Staging Environment
 
-- **Alerting**: Configure alerts based on monitoring data to notify stakeholders of critical issues.
+- **Utilize a Staging Environment**: Before deploying new features to production, test them in a staging environment that mirrors the production setup. This practice minimizes the risk of introducing errors into the live application.
 
-- **SLIs and SLOs**
+  - Set up a separate instance of the application where features can be tested in a controlled environment.
 
-  - **Monitoring**: Track Service Level Indicators and manage Service Level Objectives to ensure performance goals are met.
+### 5. User-Friendly Error Responses
 
-## 🚧**Error Handling and Rollback**
+#### Custom Error Pages
 
-- **Strategies**
+- **Meaningful Error Messages**: Provide users with meaningful error messages instead of generic ones. Tailor messages to be informative and guide users on what steps to take next.
 
-  - **Error Detection**: Monitor and log errors to detect issues promptly.
+  - Instead of a generic "404 Not Found" page, provide a message that explains what the user was trying to access and suggest possible next steps.
 
-  - **Rollback**:
+#### Graceful Degradation
 
-    - **Automated Rollback**: Implement automatic rollback to previous versions if deployment fails.
+- **Limited Functionality During Failures**: Ensure that some core functionalities remain available even during partial system failures. This approach enhances user experience and trust in the application.
 
-    - **Manual Rollback**: Provide manual procedures for reverting changes if necessary.
+  - Feature fails, provide a fallback option that allows users to continue with other parts of the application.
 
-    - **Version Control**: Use version control to manage and revert to stable versions as needed.
+### 6. Post-Mortem Analysis
 
-- **Integration Testing**
+#### Root Cause Analysis
 
-  - **Testing and Validation**: Perform integration testing to ensure system components work together as expected.
+- **Conduct a Post-Mortem**: After an error occurs, perform a thorough investigation to identify the root cause of the issue. Document findings and lessons learned to prevent similar issues in the future.
 
-## ➡️**Security**
+  - After a deployment failure, gather the team to discuss what went wrong, what could have been done differently, and how to improve processes.
 
-- **Measures**
+## ➡️ Security
 
-1. **Data Encryption**:
-   - **Encryption at Rest**: Ensure that all stored data is encrypted to prevent unauthorized access.
-   - **Encryption in Transit**: Use TLS to secure data transmission between services and clients.
+Security is a priority for the system. We validate all data entering the system, use secure connections (HTTPS), and protect APIs with authentication mechanisms to ensure that only authorized users can access information.
 
-2. **Access Control**:
-   - **Authentication**: Implement strong authentication mechanisms for users accessing the system.
-   - **Authorization**: Define and enforce access control policies to restrict user privileges.
+### Types of Validations
 
-3. **Vulnerability Management**:
-   - **Regular Updates**: Keep all system components updated with the latest security patches.
-   - **Security Scanning**: Perform regular scans for vulnerabilities in the code and dependencies.
+1. **Input Validation**:
+   - **Sanitization**: All user inputs will be sanitized to prevent SQL Injection attacks. For instance, using parameterized queries with Flask and SQLAlchemy helps mitigate this risk.
+   - **Type Checking**: Validate that input data types match expected formats (e.g., strings for names, integers for IDs) using Flask's built-in request validation or libraries like Marshmallow.
 
-4. **Incident Response**:
-   - **Monitoring**: Set up monitoring and alerting to detect and respond to security incidents.
-   - **Response Plan**: Develop and maintain an incident response plan for handling security breaches.
+2. **Output Encoding**:
+   - Prevent Cross-Site Scripting (XSS) by safely outputting user data. Utilize Flask’s `Markup` to escape HTML characters when rendering templates.
 
-- **Scalability and Resilience**
+3. **CSRF Protection**:
+   - Implement Cross-Site Request Forgery (CSRF) protection using the Flask-WTF extension, which adds CSRF tokens to forms, ensuring that requests are genuine.
 
-  - **Security Practices**: Implement scalable and resilient security measures.
+4. **Rate Limiting**:
+   - Utilize libraries like Flask-Limiter to restrict the number of requests a user can make to APIs within a certain timeframe, thus reducing the risk of Denial of Service (DoS) attacks.
 
-  - **SRE**: Integrate security practices within the SRE framework to ensure reliability and resilience.
+### Authentication Techniques
 
-## ✏️**Additional Considerations**
+1. **JWT (JSON Web Tokens)**:
 
-- **Cost Management**
+   - Employ JWT for stateless authentication. After user login, the server issues a token that the client includes in each request's `Authorization` header. Libraries such as PyJWT can be used for encoding and decoding tokens.
 
-1. **Cost Optimization**:
-   - **Resource Utilization**: Monitor and optimize resource usage to avoid over-provisioning and reduce costs.
-   - **Scaling**: Implement auto-scaling to adjust resources based on demand and avoid unnecessary expenses.
+2. **OAuth 2.0**:
 
-2. **Cost Reporting**:
-   - **Analysis**: Regularly review cost reports and analyze spending patterns.
-   - **Budgeting**: Set budgets and track expenditures to ensure alignment with financial goals.
+   - Implement OAuth 2.0 for third-party authentication, allowing users to log in using their accounts from platforms like Google or Facebook, facilitated by libraries such as Authlib.
 
-3. **Cost Recovery**:
-   - **Backups**: Implement robust backup solutions to protect against data loss and ensure recovery.
-   - **Disaster Recovery**: Develop and test disaster recovery plans to minimize downtime and data loss.
+3. **Session-Based Authentication**:
 
-4. **SRE and Scalability Management**
+   - Use Flask's session management for server-side sessions. Store user session data on the server and manage sessions using secure cookies marked as HttpOnly and Secure.
 
-- **SRE**: Focus on reliability and performance management through SRE principles.
+4. **Password Hashing**:
 
-- **Scalability and Costs**: Manage the impact of scalability on costs effectively.
+   - Using libraries like bcrypt or argon2 before storing them in the database. This protects passwords even if the database is compromised.
+
+5. **Two-Factor Authentication (2FA)**:
+
+   - Enhance security by implementing, requiring users to verify their identity through an additional method (a code sent via SMS or an authenticator app) after entering their password.
+
+6. **Ethical Hacking**:
+
+   - By integrating these validations and authentication methods, the system's security will be strengthened, safeguarding against potential threats. For further reading on web application security best practices, consider resources like the [OWASP Foundation](https://owasp.org).
+
+## ✏️ Additional Considerations
+
+As we look toward the future, there are several potential enhancements that could be made to this system architecture. Transitioning to a **microservices architecture** offers numerous benefits, including improved scalability and maintainability. By breaking down the application into smaller, independent services, each can be developed, deployed, and scaled individually. This approach allows teams to adopt different technologies best suited for specific tasks, enabling faster development cycles and a more agile response to changing business needs.
+
+In addition, utilizing **Kubernetes** for orchestration enhances the deployment and management of these microservices. Kubernetes automates the scaling, deployment, and management of containerized applications, ensuring high availability and efficient resource utilization. This platform facilitates continuous integration and continuous delivery (CI/CD) processes, allowing teams to deliver updates more frequently and reliably. The ability to seamlessly manage service discovery, load balancing, and self-healing capabilities further solidifies Kubernetes as a powerful tool in modern cloud-native environments.
+
+By considering these advancements, we can ensure that the system remains adaptable, robust, and prepared for future challenges.

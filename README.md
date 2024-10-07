@@ -7,7 +7,6 @@ This project implements a basic CRUD (Create, Read, Update, Delete) form for man
 - [📋 CRUD Project with Frontend and Backend](#-crud-project-with-frontend-and-backend)
   - [🗂️ Table of Contents](#️-table-of-contents)
   - [📖 Project Description](#-project-description)
-    - [🔗 API Endpoints](#-api-endpoints)
     - [🛑 Considerations](#-considerations)
     - [📂 Project Structure](#-project-structure)
   - [✅ Requirements](#-requirements)
@@ -33,33 +32,30 @@ This project allows the management of items via a basic CRUD form, where you can
 
 The data can be stored in either a JSON file or a database.
 
-### 🔗 API Endpoints
-
-- **GET /api/items** - List all items.
-- **GET /api/items/:id** - Retrieve an item by its ID.
-- **POST /api/items** - Create a new item.
-- **PUT /api/items/:id** - Update an existing item.
-- **DELETE /api/items/:id** - Delete an item.
-
 ### 🛑 Considerations
 
 - **Security**: For this test, advanced security mechanisms such as authentication or thorough data validation have not been included.
-
-- **Limits**: The storage is managed with SQLite, which is suitable for testing purposes but not recommended for production environments.
 
 ### 📂 Project Structure
 
 ```plaintext
 .
-├── backend/
+├── .github
+│   ├── dependabot.yml
+│   └── workflows
+│       ├── cd-pipeline.yml
+│       └── ci-pipeline.yml
+├── src/
 │   ├── app.py
+│   ├── data.json
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── data.json
-├── frontend/
-│   ├── index.html
-│   ├── styles.css
-│   └── script.js
+│   ├── templates
+│   │   └── index.html
+│   └── static
+│       ├── styles.css
+│       └── script.js
 ├── docker-compose.yml
 └── README.md
 
@@ -67,10 +63,11 @@ The data can be stored in either a JSON file or a database.
 
 ## ✅ Requirements
 
-- 🐍 Python 3.12
-- 🐳 [Docker](https://www.docker.com/get-started)
-- [Docker Compose](https://docs.docker.com/compose/)
-- Git
+- 🐍 Python 3.12.
+- 🐳 [Docker](https://www.docker.com/get-started).
+- [Docker Compose](https://docs.docker.com/compose/).
+- Git.
+- [GitHub Actions](https://docs.github.com/en/actions).
 
 ## 🔧 Installation and Setup
 
@@ -100,6 +97,7 @@ To start the complete application using Docker Compose:
 
     ```bash
     docker-compose up
+
     ```
 
 2. ## 🌐 Accessing the Application
@@ -124,6 +122,7 @@ Every time a *push* is made to the `main` branch, the following pipeline is trig
 The project is configured to be deployed on **Render**, which provides a managed server infrastructure for both applications (frontend and backend).
 
 - **Frontend** is deployed as a web service accessible at [https://frontend.render.com](https://frontend.render.com).
+
 - **Backend** is deployed as a RESTful API at [https://backend.render.com](https://backend.render.com).
 
 ### How to run the pipeline locally
@@ -155,23 +154,13 @@ docker-compose up --build
 
 ## 🏗️ Architecture
 
-The system consists of two services:
-
-1. **📊 Frontend**: A simple user interface for CRUD operations that interacts with the backend.
-
-2. **📊 Backend**: A RESTful API providing CRUD operations on stored data (JSON or database).
-
-![Architecture Diagram](./docs/assets/images/diagram.png)
+For detailed information on the system's architecture, including design decisions and component interactions, refer to the [Architecture Guide](./docs/guides/ARCHITECTURE.md).
 
 ## 🤝 Contributing
 
-We welcome contributions! Please follow these steps:
+To contribute to this project, please check out our [Contribution Guide](./docs/guides/CONTRIBUTING.md) for instructions on setting up your development environment and the process for submitting contributions.
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/new-feature`).
-3. Commit your changes (`git commit -am 'Add new feature'`).
-4. Push to the branch (`git push origin feature/new-feature`).
-5. Open a Pull Request.
+Describe how to contribute to the project’s documentation
 
 ## 📜 License
 

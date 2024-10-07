@@ -7,7 +7,7 @@ window.onload = () => {
 
 function fetchItems() {
     statusMessage.textContent = "Loading items...";
-    fetch('/api/items')
+    fetch('http://localhost:50010/api/items')
         .then(response => response.json())
         .then(data => {
             items = data;
@@ -42,7 +42,7 @@ document.getElementById('crudForm').onsubmit = function(event) {
 
     if (itemId) {
         statusMessage.textContent = "Updating the item...";
-        fetch(`/api/items/${itemId}`, {
+        fetch(`http://localhost:50010/api/items/${itemId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: itemName })
@@ -56,7 +56,7 @@ document.getElementById('crudForm').onsubmit = function(event) {
         });
     } else {
         statusMessage.textContent = "Creating a new item...";
-        fetch('/api/items', {
+        fetch('http://localhost:50010/api/items', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: itemName })
@@ -74,7 +74,7 @@ document.getElementById('crudForm').onsubmit = function(event) {
 
 function deleteItem(index) {
     statusMessage.textContent = "Deleting the item...";
-    fetch(`/api/items/${index}`, { method: 'DELETE' })
+    fetch(`http://localhost:50010/api/items/${index}`, { method: 'DELETE' })
         .then(() => {
             items.splice(index, 1);
             renderItems();

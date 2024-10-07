@@ -1,14 +1,24 @@
+from . import routes
+import os
 from flask import Flask
-from config.config import Config
-from .routes import main_bp
-from utils.log_utils import setup_logging
+from flask_sqlalchemy import SQLAlchemy
 
+app = Flask(__name__)
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+database_url = os.environ.get('TF_VAR_postgres_url')
 
-    setup_logging()
-    app.register_blueprint(main_bp)
+if not database_url:
+    raise ValueError(
+        "The environment variable 'TF_VAR_postgres_url' is not set."
+    )
 
-    return app
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+try:
+    db.engine.execute('SELECT 1')
+    print("Database connection successful.")
+except Exception as e:
+    print("Error connecting to the database:", e)
