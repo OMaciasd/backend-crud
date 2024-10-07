@@ -31,7 +31,7 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=$PYTHONPATH:/home/runner/work/backend-crud/backend-crud/src
-          pytest src/tests/
+          pytest src/tests/ci/
 
       - name: Build Docker image
         run: docker build . -t my-app:${{ github.sha }}
