@@ -3,10 +3,12 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - main
+      - test
+
   pull_request:
     branches:
       - main
+      - develop
 
 jobs:
   build:
@@ -24,17 +26,18 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r src/requirements.txt
 
       - name: Run tests
         run: |
-          pytest tests/
-
-      - name: Build Docker image
-        run: docker build . -t my-app:${{ github.sha }}
+          export PYTHONPATH=$PYTHONPATH:/home/runner/work/backend-crud/backend-crud/src
+          pytest src/tests/ci/
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        
+      - name: Build Docker image
+        run: cd src/ && docker build -t "${{ secrets.DOCKER_USERNAME }}/my-app:${{ github.sha }}" .
 
       - name: Push Docker image
-        run: docker push my-app:${{ github.sha }}
+        run: docker push "${{ secrets.DOCKER_USERNAME }}/my-app:${{ github.sha }}"
