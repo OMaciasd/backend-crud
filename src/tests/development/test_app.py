@@ -1,191 +1,141 @@
+import logging
 import pytest
-from app.app import app
+from src.app import app
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("test_log.txt"),
+        logging.StreamHandler()
+    ]
+)
 
 
 @pytest.fixture
 def client():
-    app.config['TESTING'] = True
+    """Fixture to create a test client for the application."""
     with app.test_client() as client:
         yield client
 
 
-def test_index(client):
-    """Test the index route."""
-    response = client.get('/')
-    if response.status_code != 200:
-        raise ValueError(
-            f"Expected status code 200, but got {response.status_code}"
+@pytest.fixture
+def sample_item(client):
+    """Fixture to create a sample item for tests."""
+    response = client.post('/api/items', json={'name': 'Sample Item'})
+    check_status_code(response, 201)
+    return response.json
+
+
+def check_status_code(response, expected_code):
+    """Verify that the response status code is as expected."""
+    if response.status_code != expected_code:
+        logging.error(
+            f"Expected status code {expected_code}, "
+            f"got {response.status_code}."
         )
-    if b'Welcome to the CRUD API' not in response.data:
-        raise ValueError(
-            "Response data does not contain 'Welcome to the CRUD API'"
+        raise AssertionError(
+            f"Expected status code {expected_code}, "
+            f"got {response.status_code}."
         )
+    logging.info(f"Test passed: Status code is {expected_code}.")
 
 
-def test_get_items_empty(client):
-    """Test GET /api/items on empty data."""
-    response = client.get('/api/items')
-    if response.status_code != 200:
-        raise ValueError(
-            f"Expected status code 200, but got {response.status_code}"
-        )
-    if response.get_json() != []:
-        raise ValueError(
-            f"Expected an empty items list, but got: {response.get_json()}"
-        )
+class TestAPI:
+    def test_index(self, client):
+        """Test the index route."""
+        response = client.get('/')
+        check_status_code(response, 200)
 
+        if b'Welcome to the API!' not in response.data:
+            logging.error("Welcome message not found in response.")
+            raise AssertionError("Welcome message not found in response.")
+        logging.info("Welcome message found in response.")
 
-def test_add_item(client):
-    """Test adding an item."""
-    response = client.post('/api/items', json={
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    })
-    if response.status_code != 201:
-        raise ValueError(
-            f"Expected status code 201, but got {response.status_code}"
-        )
-    if response.get_json() != {
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    }:
-        raise ValueError(
-            f"Expected item data to be {{'name': 'Item 1', "
-            "'description': 'Un item de prueba'}}, "
-            f"but got {response.get_json()}"
-        )
+    def test_get_items(self, client):
+        """Test to get all items."""
+        response = client.get('/api/items')
+        check_status_code(response, 200)
 
+        if len(response.json) == 0:
+            logging.error("Expected at least one item in the response.")
+            raise AssertionError("Expected at least one item in the response.")
+        logging.info("Get items response is valid and contains items.")
 
-def test_get_items_after_add(client):
-    """Test GET /api/items after adding an item."""
-    client.post('/api/items', json={
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    })
-    response = client.get('/api/items')
+    def test_add_item(self, client):
+        """Test to add a new item."""
+        response = client.post('/api/items', json={'name': 'New Item'})
+        check_status_code(response, 201)
 
-    if response.status_code != 200:
-        raise ValueError(
-            f"Expected status code 200, but got {response.status_code}"
-        )
-
-    expected_response = [{
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    }]
-
-    if response.get_json() != expected_response:
-        raise ValueError(
-            f"Expected items list to be {expected_response}, "
-            f"but got {response.get_json()}"
+        if b'Item added successfully' not in response.data:
+            logging.error(
+                "Item added successfully message not found in response."
+            )
+            raise AssertionError(
+                "Item added successfully message not found in response."
+            )
+        logging.info(
+            "Item added successfully message found in response."
         )
 
+    def test_add_item_invalid(self, client):
+        """Test to try adding an item with invalid data."""
+        response = client.post('/api/items', json={'invalid_key': 'New Item'})
+        check_status_code(response, 400)
 
-def test_update_item(client):
-    """Test updating an item."""
-    client.post('/api/items', json={
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    })
-    response = client.put('/api/items/0', json={
-        "name": "Updated Item",
-        "description": "Updated description"
-    })
-    if response.status_code != 200:
-        raise ValueError(
-            f"Expected status code 200, but got {response.status_code}"
-        )
-    if response.get_json() != {
-        "name": "Updated Item",
-        "description": "Updated description"
-    }:
-        raise ValueError(
-            f"Expected updated item data to be {{'name': 'Updated Item', "
-            "'description': 'Updated description'}}, "
-            f"but got {response.get_json()}"
+        if b'Invalid data' not in response.data:
+            logging.error("Invalid data error message not found in response.")
+            raise AssertionError(
+                "Invalid data error message not found in response."
+            )
+        logging.info(
+            "Invalid data error message found in response."
         )
 
+    def test_delete_item(self, client, sample_item):
+        """Test to delete an item."""
+        item_id = sample_item['id']
+        response = client.delete(f'/api/items/{item_id}')
+        check_status_code(response, 204)
 
-def test_get_items_after_update(client):
-    """Test GET /api/items after updating an item."""
-    client.post('/api/items', json={
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    })
-    client.put('/api/items/0', json={
-        "name": "Updated Item",
-        "description": "Updated description"
-    })
-    response = client.get('/api/items')
-    if response.status_code != 200:
-        raise ValueError(
-            f"Expected status code 200, but got {response.status_code}"
+        response = client.get(f'/api/items/{item_id}')
+        check_status_code(response, 404)
+
+    def test_update_item(self, client, sample_item):
+        """Test to update an existing item."""
+        item_id = sample_item['id']
+        response = client.put(
+            f'/api/items/{item_id}',
+            json={'name': 'Updated Item'}
         )
-    if response.get_json() != [{
-        "name": "Updated Item",
-        "description": "Updated description"
-    }]:
-        raise ValueError(
-            "Expected items list to be [{'name': 'Updated Item', "
-            "'description': 'Updated description'}], "
-            f"but got {response.get_json()}"
-        )
+        check_status_code(response, 200)
 
+        response = client.get(f'/api/items/{item_id}')
+        if b'Updated Item' not in response.data:
+            logging.error("Updated Item not found in response.")
+            raise AssertionError("Updated Item not found in response.")
+        logging.info("Updated Item found in response.")
 
-def test_delete_item(client):
-    """Test deleting an item."""
-    client.post('/api/items', json={
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    })
-    response = client.delete('/api/items/0')
-    if response.status_code != 204:
-        raise ValueError(
-            f"Expected status code 204, but got {response.status_code}"
-        )
+    def test_get_nonexistent_item(self, client):
+        """Test to try getting a nonexistent item."""
+        response = client.get('/api/items/9999')
+        check_status_code(response, 404)
 
-
-def test_get_items_after_delete(client):
-    """Test GET /api/items after deleting an item."""
-    client.post('/api/items', json={
-        "name": "Item 1",
-        "description": "Un item de prueba"
-    })
-    client.delete('/api/items/0')
-    response = client.get('/api/items')
-    if response.status_code != 200:
-        raise ValueError(
-            f"Expected status code 200, but got {response.status_code}"
-        )
-    if response.get_json() != []:
-        raise ValueError(
-            f"Expected items list to be [], but got {response.get_json()}"
+        if b'Item not found' not in response.data:
+            logging.error("Item not found message not found in response.")
+            raise AssertionError(
+                "Item not found message not found in response."
+            )
+        logging.info(
+            "Item not found message found in response."
         )
 
+    def test_access_protected_route_without_auth(self, client):
+        """Test to access a protected route without authentication."""
+        response = client.get('/api/protected-route')
+        check_status_code(response, 401)
 
-def test_update_nonexistent_item(client):
-    """Test updating a non-existent item."""
-    response = client.put('/api/items/999', json={"name": "Should Fail"})
-    if response.status_code != 404:
-        raise ValueError(
-            f"Expected status code 404, but got {response.status_code}"
-        )
-    if response.get_json().get('error') != 'Item not found':
-        raise ValueError(
-            f"Expected error message 'Item not found', but got "
-            f"{response.get_json().get('error')}"
-        )
-
-
-def test_delete_nonexistent_item(client):
-    """Test deleting a non-existent item."""
-    response = client.delete('/api/items/999')
-    if response.status_code != 404:
-        raise ValueError(
-            f"Expected status code 404, but got {response.status_code}"
-        )
-    if response.get_json().get('error') != 'Item not found':
-        raise ValueError(
-            f"Expected error message 'Item not found', but got "
-            f"{response.get_json().get('error')}"
-        )
+        if b'Unauthorized' not in response.data:
+            logging.error("Unauthorized message not found in response.")
+            raise AssertionError("Unauthorized message not found in response.")
+        logging.info("Unauthorized message found in response.")

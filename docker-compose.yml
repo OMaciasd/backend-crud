@@ -1,53 +1,25 @@
 services:
-  # backend:
-  #   build:
-  #     context: ./src
-  #   ports:
-  #     - "50010:50010"
-  #   volumes:
-  #     - ./src:/app
-  #   networks:
-  #     - app-network
-  #   environment:
-  #     - TF_VAR_postgres_db=${TF_VAR_postgres_db}
-  #     - TF_VAR_postgres_user=${TF_VAR_postgres_user}
-  #     - TF_VAR_postgres_password=${TF_VAR_postgres_password}
-  #     - TF_VAR_postgres_url=${TF_VAR_postgres_url}
-  #     - TF_VAR_postgres_port=${TF_VAR_postgres_port}
+  backend:
+    build:
+      context: ./src
+    ports:
+      - "50010:50010"
+    volumes:
+      - ./src:/app
+    networks:
+      - app-network
 
   frontend:
     image: nginx:alpine
     volumes:
-      - ./frontend:/usr/share/nginx/html
+      - ./src/static:/usr/share/nginx/html
+      - ./src/templates:/usr/share/nginx/html
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
       - "80:80"
     networks:
       - app-network
 
-  postgres:
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: ${TF_VAR_postgres_user}
-      POSTGRES_PASSWORD: ${TF_VAR_postgres_password}
-      POSTGRES_DB: ${TF_VAR_postgres_db}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./scripts/sql/Postgres/PostgreSQL.conf:/etc/postgresql/postgresql.conf
-    networks:
-      - app-network
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-        reservations:
-          cpus: "1.0"
-    container_name: postgres
-    ports:
-      - "5432:5432"
-
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  postgres-data:

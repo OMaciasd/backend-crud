@@ -1,24 +1,42 @@
-from . import routes
 import os
+import json
+import logging
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from api.routes import main_bp
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-database_url = os.environ.get('TF_VAR_postgres_url')
+app.config.from_object('config.Config')
 
-if not database_url:
-    raise ValueError(
-        "The environment variable 'TF_VAR_postgres_url' is not set."
-    )
+data_file_path = os.path.join(
+    os.path.dirname(
+        os.path.dirname(__file__)
+    ),
+    'data.json'
+)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
+if not os.path.exists(data_file_path):
+    logger.error("Data file does not exist at path: %s", data_file_path)
+    raise FileNotFoundError(f"Data file not found at {data_file_path}")
 
 try:
-    db.engine.execute('SELECT 1')
-    print("Database connection successful.")
+    with open(data_file_path) as data_file:
+        app.config['DATA'] = json.load(data_file)
+        logger.info("Data loaded successfully.")
+except FileNotFoundError as fnf_error:
+    logger.error("Data file not found: %s", fnf_error)
+    raise
+except json.JSONDecodeError as json_error:
+    logger.error("Error decoding JSON: %s", json_error)
+    raise
 except Exception as e:
-    print("Error connecting to the database:", e)
+    logger.error("Error loading data from JSON: %s", e)
+    raise
+
+app.register_blueprint(main_bp)
+
+if __name__ == '__main__':
+    app.run(debug=app.config['DEBUG'])
