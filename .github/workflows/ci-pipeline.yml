@@ -30,6 +30,7 @@ jobs:
 
       - name: Run tests
         run: |
+          export PYTHONPATH=$PYTHONPATH:/home/runner/work/backend-crud/backend-crud/src
           pytest src/tests/
 
       - name: Build Docker image
