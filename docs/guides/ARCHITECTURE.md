@@ -81,6 +81,8 @@ The components of the system work together: when you make a request, such as reg
 
 ### 1. User Registration
 
+![post](../assets/images/git/curl.png)
+
 - **HTTP Request**:
   - **Method**: POST
   - **Endpoint**: `/api/register`
@@ -124,6 +126,8 @@ The components of the system work together: when you make a request, such as reg
 
 ### 3. Updating User Information
 
+![put](../assets/images/git/put.png)
+
 - **HTTP Request**:
   - **Method**: PUT
   - **Endpoint**: `/api/users/123`
@@ -146,6 +150,8 @@ The components of the system work together: when you make a request, such as reg
     ```
 
 ### 4. Deleting a User
+
+![delete](../assets/images/git/delete.png)
 
 - **HTTP Request**:
   - **Method**: DELETE
