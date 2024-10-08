@@ -1,7 +1,7 @@
 import requests
 import pytest
 
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://localhost:50010"
 
 
 def test_endpoint_status():

@@ -1,81 +1,48 @@
 import os
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
+def get_env_variable(var_name, default=None):
+    """Gets the environment variable or raises an error if not found."""
+    value = os.getenv(var_name, default)
+    if value is None and default is None:
+        logger.error(f"Missing environment variable '{var_name}'.")
+        raise EnvironmentError(f"Missing environment variable: {var_name}")
+    return value
+
+
 class Config:
+    """Configuration class for the application."""
     DEBUG = os.getenv('DEBUG', 'False').lower() in ['true', '1']
-    POSTGRES_DB = os.getenv('TF_VAR_postgres_db')
-    POSTGRES_USER = os.getenv('TF_VAR_postgres_user')
-    POSTGRES_PASSWORD = os.getenv('TF_VAR_postgres_password')
-    HOST = os.getenv('TF_VAR_host', 'localhost')
-    POSTGRES_URL = os.getenv('TF_VAR_postgres_url')
-    RABBITMQ_URI = os.getenv('TF_VAR_rabbitmq_uri')
-    POSTGRES_PORT = os.getenv('TF_VAR_postgres_port')
+
+    # DATABASE_URL = get_env_variable('DATABASE_URL')  # Commented out
+    # SECRET_KEY = get_env_variable('SECRET_KEY')      # Commented out
 
     @classmethod
     def validate(cls):
-        required_vars = {
-            'TF_VAR_postgres_db': cls.POSTGRES_DB,
-            'TF_VAR_postgres_user': cls.POSTGRES_USER,
-            'TF_VAR_postgres_password': cls.POSTGRES_PASSWORD,
-            'TF_VAR_host': cls.HOST,
-            'TF_VAR_postgres_url': cls.POSTGRES_URL,
-            'TF_VAR_rabbitmq_uri': cls.RABBITMQ_URI,
-            'TF_VAR_postgres_port': cls.POSTGRES_PORT
-        }
+        """Validates required environment variables."""
+        # required_vars = ['DATABASE_URL', 'SECRET_KEY']  # Commented out
 
-        missing_vars = [
-            var for var,
-            value in required_vars.items(
-            )
-            if not value
-        ]
+        # Check for any required environment variables
+        # missing_vars = [var for var in required_vars if not os.getenv(var)]
 
-        if missing_vars:
-            missing_vars_str = ', '.join(missing_vars)
-            logger.error("Missing environment variables: %s", missing_vars_str)
-            raise EnvironmentError(
-                "Required environment variables are missing:"
-                f"{missing_vars_str}"
-            )
+        # if missing_vars:
+        #     logger.error(
+        #         "Missing environment variables: %s", ', '.join(missing_vars)
+        #     )
+        #     raise EnvironmentError(
+        #         "Required environment variables are missing: "
+        #         f"{', '.join(missing_vars)}"
+        #     )
 
         logger.info("All required environment variables are present.")
 
 
-class DevelopmentConfig(Config):
-    """Development configuration."""
-    DEBUG = True
-
-
-class TestingConfig(Config):
-    """Testing configuration."""
-    DEBUG = True
-    TESTING = True
-
-
-class ProductionConfig(Config):
-    """Production configuration."""
-    DEBUG = False
-
-
-def get_config():
-    """Retrieve the appropriate configuration based on the environment."""
-    env = os.getenv('ENVIRONMENT', 'development')
-
-    config_map = {
-        'production': ProductionConfig,
-        'test': TestingConfig,
-        'development': DevelopmentConfig
-    }
-
-    config_class = config_map.get(env)
-    if not config_class:
-        raise ValueError(f"Unknown environment: {env}")
-
-    config_class.validate()
-    return config_class()
-
-
-config = get_config()
+if __name__ == "__main__":
+    Config.validate()
