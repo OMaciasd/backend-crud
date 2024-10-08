@@ -67,7 +67,9 @@ The data can be stored in either a JSON file or a database.
 - 🐳 [Docker](https://www.docker.com/get-started).
 - [Docker Compose](https://docs.docker.com/compose/).
 - Git.
+- [GitHub](https://docs.github.com).
 - [GitHub Actions](https://docs.github.com/en/actions).
+- [Render](https://render.com/).
 
 ## 🔧 Installation and Setup
 
