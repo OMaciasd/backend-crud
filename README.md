@@ -121,7 +121,7 @@ Every time a *push* is made to the `main` branch, the following pipeline is trig
 
 The project is configured to be deployed on **Render**, which provides a managed server infrastructure for both applications (frontend and backend).
 
-- **Backend** is deployed as a RESTful API at [https://backend.render.com](https://backend.render.com).
+- **Backend** is deployed as a RESTful API at [https://backend-crud.render.com](https://backend-crud-5d2c.onrender.com).
 
 ### How to run the pipeline locally
 
