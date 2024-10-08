@@ -2,16 +2,25 @@
 
 ## **Contents**
 
-- 🧩[**Project Structure**](#project-structure)
-- 🚨[**Managing Sensitive Files**](#managing-sensitive-files)
-- 📥[**Setting Up the Development Environment**](#setting-up-the-development-environment)
-- 📝[**Workflow**](#workflow)
-- 🔍[**Testing and Verification**](#testing-and-verification)
-- 🚀[**Commit Messages**](#commit-messages)
-- 🌐[**Submitting Pull Requests**](#submitting-pull-requests)
-- 🚀[**Code Review**](#code-review)
-- 📂[**Verifying the Pipeline in the Repository**](#verifying-the-pipeline-in-the-repository)
-- 🖥️[**Documentation Contributions**](#documentation-contributions)
+- [**Contribution Guide**](#contribution-guide)
+  - [**Contents**](#contents)
+  - [🧩 **Project Structure**](#-project-structure)
+  - [🔒 Managing Sensitive Files](#-managing-sensitive-files)
+    - [`.env` Files](#env-files)
+    - [JSON Files](#json-files)
+  - [**Setting Up the Development Environment**](#setting-up-the-development-environment)
+    - [**Setting Environment Variables**](#setting-environment-variables)
+  - [**Workflow**](#workflow)
+    - [**Creating Branches**](#creating-branches)
+  - [🔍 **Testing and Verification**](#-testing-and-verification)
+    - [**Code Standards**](#code-standards)
+    - [✅ **Test Coverage**](#-test-coverage)
+    - [✅ **Load Testing**](#-load-testing)
+  - [**Commit Messages**](#commit-messages)
+  - [**Submitting Pull Requests**](#submitting-pull-requests)
+  - [Code Review](#code-review)
+  - [📂 Verifying the Pipeline in the Repository](#-verifying-the-pipeline-in-the-repository)
+  - [**Documentation Contributions**](#documentation-contributions)
 
 ## 🧩 **Project Structure**
 
@@ -48,13 +57,25 @@
 
 - The solution is organized using the **GitFlow** workflow, which facilitates structured development and integration.
 
-![fetch](../assets/images/git/git-fetch.png)
+- We welcome contributions! Please follow these steps:
 
-![gitflow](../assets/images/git/git.png)
+1. Fork the repository.
 
-![flow](../assets/images/git/git-flow.png)
+   ![fetch](../assets/images/git/git-fetch.png)
 
-![push](../assets/images/git/git-push.png)
+2. Create a new branch (`git flow feature start new-feature`).
+
+   ![gitflow](../assets/images/git/git.png)
+
+3. Commit your changes (`git commit -am 'Add new feature'`).
+
+   ![flow](../assets/images/git/git-flow.png)
+
+4. Push to the branch (`git push origin develop`).
+
+   ![push](../assets/images/git/git-push.png)
+
+5. Open a Pull Request.
 
 ## 🔍 **Testing and Verification**
 
